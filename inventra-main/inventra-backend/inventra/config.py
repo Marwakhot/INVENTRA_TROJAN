@@ -59,6 +59,9 @@ def _allowed_hosts() -> List[str]:
         hosts.append(os.environ["RAILWAY_PUBLIC_DOMAIN"])
     if os.getenv("RAILWAY_ENVIRONMENT"):
         hosts.append("healthcheck.railway.app")
+    # On Render: its public domain (set by the platform)
+    if os.getenv("RENDER_EXTERNAL_HOSTNAME"):
+        hosts.append(os.environ["RENDER_EXTERNAL_HOSTNAME"])
     return hosts
 
 
