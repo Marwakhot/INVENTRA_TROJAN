@@ -318,7 +318,33 @@ input[type=checkbox]{accent-color:var(--sig);width:15px;height:15px}
 .kc.hero .lbl,.kc.hero .dl{color:var(--muted)}
 .kc.hero .now{font-size:30px}
 
+.kstrip.k5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.cost-col{display:flex;flex-direction:column}
+.cost-col .card-h{margin-bottom:0}
+.cost-col .kc{flex:1;padding:16px 0;border-right:0 !important;border-bottom:1px solid var(--line2) !important;display:flex;flex-direction:column;justify-content:center}
+.cost-col .kc:last-child{border-bottom:0 !important;padding-bottom:0}
+.cost-col .kc .now{font-size:30px}
+.kc .lbl small{font-size:inherit;opacity:.7;margin-left:4px}
+
+/* home graph and its two-way switch (same feel as the theme toggle) */
+.hg-sw{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;padding:2px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.hg-sw button{position:relative;z-index:1;border:0;background:none;color:var(--muted);font-size:12px;font-weight:500;padding:6px 14px;border-radius:999px;white-space:nowrap;transition:color .2s}
+.hg-sw button.on{color:var(--bg)}
+.hg-sw .th{position:absolute;top:2px;bottom:2px;left:2px;width:calc(50% - 2px);border-radius:999px;background:var(--ink);transition:transform .25s ease}
+.hg-sw .th.r{transform:translateX(100%)}
+.hg-big{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:-4px 0 8px}
+.hg-big b{font-size:26px;font-weight:500;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.hg-big span{font-size:12px;color:var(--muted)}
+
 /* queue */
+.q-more{margin-top:12px}
+.rej-fold{margin-top:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--card);box-shadow:var(--shadow)}
+.rej-fold summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 20px;font-size:13px;font-weight:600}
+.rej-fold summary::-webkit-details-marker{display:none}
+.rej-fold summary .muted{display:inline-flex;align-items:center;gap:6px;font-weight:400;font-size:12px}
+.rej-fold summary svg{width:13px;height:13px;transition:transform .2s}
+.rej-fold[open] summary svg{transform:rotate(180deg)}
+.rej-fold .rbody{padding:0 20px 8px;border-top:1px solid var(--line2)}
 .q-item{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line2)}
 .q-item:last-child{border-bottom:0}
 .q-item .n{width:30px;height:30px;border-radius:var(--r-sm);background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:var(--mono);font-size:12px}
@@ -641,6 +667,8 @@ input[type=checkbox]{accent-color:var(--sig);width:15px;height:15px}
 .out-t td.r{padding-left:10px}
 @media(max-width:720px){.kstrip.k8{grid-template-columns:repeat(2,minmax(0,1fr))}.kstrip.k8 .kc{border-bottom:1px solid var(--line2) !important;border-right:1px solid var(--line2) !important}.kstrip.k8 .kc:nth-child(2n){border-right:0 !important}.tnode{margin-left:calc(var(--dep) * 12px)}.alt{grid-template-columns:minmax(0,1fr) auto}}
 @media(max-width:1180px){.kstrip{grid-template-columns:repeat(3,minmax(0,1fr))}.kc:nth-child(3){border-right:0}.kc:nth-child(-n+3){border-bottom:1px solid var(--line2)}.lab-cols{grid-template-columns:1fr}.ctrls{grid-template-columns:repeat(2,minmax(0,1fr))}.sig-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.tbl-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:1180px){.kstrip.k5{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:720px){.kstrip.k5{grid-template-columns:repeat(2,minmax(0,1fr))}.kstrip.k5 .kc:last-child{grid-column:1 / -1}.hg-sw button{padding:6px 10px}}
 @media(max-width:1100px){.span-3,.span-4,.span-5,.span-6,.span-7,.span-8,.span-9{grid-column:span 12}}
 @media(max-width:860px){.top{grid-template-columns:auto 1fr auto}.where{justify-self:center}.where .wk,.where .wl{display:none}.live,.me div{display:none}.disp{font-size:44px}.fcards{grid-template-columns:1fr}.bp{grid-template-columns:1fr}.brief-row{grid-template-columns:1fr 1fr}.tbl-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sig-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.ev-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)}.ev-row>:last-child{display:none}}
 @media(max-width:720px){

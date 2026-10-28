@@ -333,7 +333,7 @@ function toggleJump(e){
   if (e.target.closest('.jump')) return;
   e.stopPropagation();
   const j = $('jump');
-  if (j.classList.contains('hidden')) j.innerHTML = [{id:'home', label:'Command Center', i:'home', stage:'Home'}, ...SECTIONS].map((s, i) => `<button onclick="go('${s.id}')"><span class="ja">${IC[s.i]}</span><span>${s.label}<small>${pad(i+1)} · ${s.stage}</small></span></button>`).join('') + `<button onclick="openPilot()"><span class="ja" style="background:#2C52E0;color:#fff">${IC.spark}</span><span>Inventra<small>press /</small></span></button>`;
+  if (j.classList.contains('hidden')) j.innerHTML = [{id:'home', label:'Command Center', i:'home', stage:'Home'}, ...SECTIONS].map((s, i) => `<button onclick="go('${s.id}')"><span class="ja">${IC[s.i]}</span><span>${s.label}<small>${pad(i+1)} · ${s.stage}</small></span></button>`).join('');
   j.classList.toggle('hidden');
 }
 function renderDock(){
@@ -349,7 +349,7 @@ function refreshChrome(){
   $('bellCount').textContent = al.length; $('bellCount').style.display = al.length ? '' : 'none';
   const fb = S.freshness && S.freshness.banner;
   $('bannerSlot').innerHTML = fb ? `<div class="banner"><span class="urg Soon"><i></i>Data freshness</span><span class="sp"><b>${esc(fb)}</b> ${Object.entries(S.freshness.locations).map(([l, v]) => `${esc(l)}: stock as of ${tlab(v.inventory_as_of)}`).join(' · ')}</span></div>` : '';
-  $('modeTag').innerHTML = `<i class="${keyed() ? 'on' : ''}"></i>${keyed() ? 'AI on' : 'Keyless'}`;
+  $('modeTag').innerHTML = `<i class="${keyed() ? 'on' : ''}"></i>${keyed() ? 'LLM on' : 'Keyless'}`;
   $('modeTag').title = serverKeyed() ? (LOCAL_KEYLESS ? 'Keyless display chosen. Click to use the backend LLM again.' : 'Explanations and typed questions use the backend LLM behind its validator. Click for keyless display.') : 'The backend has no LLM key, so the app runs keyless. Every number is the same.';
   $('trust').innerHTML = [['SKUs', SKUS().length], ['Locations', LOCS.length], ['Signals', S.signals.length], ['Watcher events', S.events.events.length], ['Decisions', S.decisions.length], ['API', API.replace(/^https?:\/\//, '')], ['Computes numbers', 'never'], ['Runs a scenario', 'never']].map(([a, b]) => `<span>${a}<b>${esc(b)}</b></span>`).join('');
   syncPilotMode();

@@ -11,7 +11,7 @@ function lazy(bucket, k, fn){
   fn().then(v => { b[k] = v; render(CURRENT, true); }).catch(e => { b[k] = {error: errMsg(e)}; render(CURRENT, true); });
   return null;
 }
-function clearLazy(){ Object.keys(LAZY).forEach(k => delete LAZY[k]); }
+function clearLazy(){ Object.keys(LAZY).forEach(k => delete LAZY[k]); if (PRICES !== 'loading') PRICES = null; }
 
 function actText(d){
   if (!d) return '';
@@ -71,21 +71,27 @@ function viewHome(){
     <div class="watch"><i></i> Watcher ${S.mode.watcher ? 'on · inbox listening' : 'off'} · ${SKUS().length} SKUs × ${LOCS.length} locations · ${keyed() ? 'LLM on' : 'keyless'}</div>
   </div>
 
-  <div class="kstrip k8 rv" style="--d:.08s">
+  <div class="kstrip k5 rv" style="--d:.08s">
     ${kc('Shortage units', b.shortage_units, a.shortage_units, fmt)}
-    ${kc('Buffer-breach days', b.buffer_breach_days, a.buffer_breach_days, fmt)}
     ${kc('Excess units, day 30', b.excess_units, a.excess_units, fmt)}
     ${kc('Ageing units, day 30', b.ageing_units, a.ageing_units, fmt, false, aed(a.ageing_aed))}
     ${kc('Aged units, day 30', b.aged_units, a.aged_units, fmt, false, aed(a.aged_aed))}
-    ${kc('Holding cost', b.holding_cost_aed, a.holding_cost_aed, aed)}
-    ${kc('Transfer and expedite cost', b.transfer_cost_aed + b.expedite_cost_aed, a.transfer_cost_aed + a.expedite_cost_aed, aed)}
     ${kc('Net benefit', 0, K.net_benefit_aed, aed, true)}
+  </div>
+
+  <div class="grid">
+    <div class="card span-8 rv" style="--d:.11s" id="homeGraph">${homeGraph()}</div>
+    <div class="card span-4 cost-col rv" style="--d:.13s">
+      <div class="card-h"><div><h3>Running costs</h3><div class="hint">Next 30 days, with the plan vs doing nothing.</div></div></div>
+      ${kc('Holding cost', b.holding_cost_aed, a.holding_cost_aed, aed)}
+      ${kc('Delivery cost <small>transfer and expedite</small>', b.transfer_cost_aed + b.expedite_cost_aed, a.transfer_cost_aed + a.expedite_cost_aed, aed)}
+    </div>
   </div>
 
   <div class="grid">
     <div class="card span-8 rv" style="--d:.14s">
       <div class="card-h"><div><h3>Recommendation queue</h3><div class="hint">Most urgent first.</div></div><span class="tag">${recs.length} to decide</span></div>
-      ${recs.map(r => queueItem(r)).join('') || '<div class="empty">No shortage needs action in the next 30 days.</div>'}
+      <div id="homeQueue">${queueList()}</div>
       ${watch.length ? `<details class="receipt" style="margin-top:10px"><summary><span>${watch.length} SKU-locations where no option passes the checks</span><span class="muted">watch</span></summary><div class="rbody">${watch.map(r => { const alt = (r.alternatives || []).find(o => o.rejection_reason); return `<div class="ln"><span>${esc(r.sku)} · ${esc(locName(r.location))} · ${esc(r.status)}${r.breach_date ? ', breach ' + dlabIso(r.breach_date) : ''}</span><span class="muted">${esc(alt ? alt.rejection_reason.split(' | ')[0] : 'no candidate passes')}</span></div>`; }).join('')}</div></details>` : ''}
     </div>
     <div class="stack span-4">
@@ -96,16 +102,108 @@ function viewHome(){
     </div>
   </div>
   <div class="grid">
-    <div class="card span-6 rv" style="--d:.22s">
-      <div class="card-h"><div><h3>Rejected options</h3><div class="hint">Tested and turned down, with the reason.</div></div></div>
-      ${rejected.slice(0, 7).map(o => `<div class="rej"><div><b>${esc(o.sku)} · ${esc(o.label)}</b><div class="why">${esc(o.rejection_reason || o.failing_checks.join(', '))}</div></div><div class="r">${robTag(o.robustness)}</div></div>`).join('') || '<div class="empty">No transfer was rejected.</div>'}
-    </div>
-    <div class="card span-6 rv" style="--d:.26s">
+    <div class="card span-12 rv" style="--d:.22s">
       <div class="card-h"><div><h3>Activity feed</h3></div>${arrowBtn("go('data')")}</div>
       ${activityFeed(5)}
     </div>
-  </div>`;
+  </div>
+  <details class="rej-fold rv" style="--d:.26s" ${REJ_OPEN ? 'open' : ''} ontoggle="REJ_OPEN=this.open">
+    <summary><span>See rejected options</span><span class="muted">${rejected.length > 7 ? `top 7 of ${rejected.length}` : rejected.length} tested and turned down ${IC.down}</span></summary>
+    <div class="rbody">${rejected.slice(0, 7).map(o => `<div class="rej"><div><b>${esc(o.sku)} · ${esc(o.label)}</b><div class="why">${esc(o.rejection_reason || o.failing_checks.join(', '))}</div></div><div class="r">${robTag(o.robustness)}</div></div>`).join('') || '<div class="empty">No transfer was rejected.</div>'}</div>
+  </details>`;
 }
+let QN = 3, REJ_OPEN = false, HG = 'value';
+// the queue shows three, then five more per click; only its own block redraws
+function queueList(){
+  const recs = S.plan.queue;
+  return (recs.slice(0, QN).map(r => queueItem(r)).join('') || '<div class="empty">No shortage needs action in the next 30 days.</div>')
+    + (recs.length > QN ? `<button class="btn sm q-more" onclick="moreQueue(5)">See ${Math.min(5, recs.length - QN)} more <span class="muted">· ${recs.length - QN} hidden</span></button>`
+      : recs.length > 3 ? `<button class="btn sm q-more" onclick="moreQueue(0)">Show fewer</button>` : '');
+}
+function moreQueue(n){ QN = n ? QN + n : 3; $('homeQueue').innerHTML = queueList(); }
+
+/* ---------------- home graph: inventory value at cost, or sales revenue ---------------- */
+const HG_TIERS = [['Fresh', 'var(--sig)'], ['Ageing', 'var(--warn)'], ['Aged', 'var(--bad)']];
+// flip the switch in place (so the thumb slides), then redraw only the title and the chart
+function setHG(v){
+  HG = v;
+  document.querySelectorAll('#homeGraph .hg-sw button').forEach(b => { const on = b.dataset.v === v; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+  const th = document.querySelector('#homeGraph .hg-sw .th'); if (th) th.classList.toggle('r', v === 'revenue');
+  drawHG();
+}
+function drawHG(){ const h = $('hgHead'), b = $('hgBody'); if (!h || !b) return; h.innerHTML = hgHead(); b.innerHTML = HG === 'value' ? valueChart() : revenueChart(); bindCharts(b); }
+const hgHead = () => `<h3>${HG === 'value' ? 'Inventory value at cost' : 'Total sales revenue'}</h3><div class="hint">${HG === 'value' ? 'Stock on hand × unit cost, by category and stock age.' : 'Units sold × unit price, all locations, last 90 days.'}</div>`;
+function homeGraph(){
+  const sw = `<div class="hg-sw" role="radiogroup" aria-label="Graph">${[['value', 'Inventory value'], ['revenue', 'Sales revenue']].map(([v, l]) =>
+    `<button role="radio" data-v="${v}" aria-checked="${HG === v}" class="${HG === v ? 'on' : ''}" onclick="setHG('${v}')">${l}</button>`).join('')}<i class="th ${HG === 'revenue' ? 'r' : ''}"></i></div>`;
+  return `<div class="card-h"><div id="hgHead">${hgHead()}</div>${sw}</div><div id="hgBody">${HG === 'value' ? valueChart() : revenueChart()}</div>`;
+}
+// unit prices come from the product endpoint, one call per SKU, fetched the first time the revenue graph opens
+let PRICES = null;
+function loadPrices(){
+  PRICES = 'loading';
+  Promise.all(SKUS().map(s => api(`/network/product?sku=${encodeURIComponent(s)}&location=All&days=30`).then(p => [s, p.unit_price])))
+    .then(Object.fromEntries, e => ({error: errMsg(e)}))
+    .then(v => { PRICES = v; if (HG === 'revenue') drawHG(); });
+}
+function valueChart(){
+  const rows = (S.ageing && S.ageing.rows) || [];
+  if (!rows.length) return '<div class="empty">No stock-age data loaded.</div>';
+  const cats = {};
+  rows.forEach(r => { const c = cats[catOf(r.sku)] || (cats[catOf(r.sku)] = {Fresh:0, Ageing:0, Aged:0, units:0}); HG_TIERS.forEach(([t]) => { c[t] += r.tiers[t].aed; c.units += r.tiers[t].units; }); });
+  const list = Object.entries(cats).map(([name, v]) => ({name, ...v, total:v.Fresh + v.Ageing + v.Aged})).sort((x, y) => y.total - x.total);
+  const tot = sum(list.map(c => c.total)), old = sum(list.map(c => c.Ageing + c.Aged));
+  const w = 760, h = 270, x0 = 64, x1 = w - 12, y0 = 14, y1 = h - 30;
+  const maxV = niceMax(Math.max(...list.map(c => c.total)) * 1.05), Y = v => y1 - v / maxV * (y1 - y0);
+  const dx = (x1 - x0) / list.length, bw = Math.min(64, dx * .5), X = i => x0 + dx * (i + .5);
+  let g = yTicks(maxV).map(v => `<line x1="${x0}" x2="${x1}" y1="${Y(v)}" y2="${Y(v)}" style="stroke:var(--line2)"/><text class="ax" x="${x0 - 8}" y="${Y(v) + 3}" text-anchor="end">${fmt(v)}</text>`).join('');
+  list.forEach((c, i) => {
+    let acc = 0;
+    const segs = HG_TIERS.filter(([t]) => c[t] > 0);
+    segs.forEach(([t, col], k) => {
+      const top = Y(acc + c[t]), bot = Y(acc), gap = k ? 2 : 0, hh = Math.max(0, bot - top - gap);
+      g += k === segs.length - 1
+        ? `<path d="M${X(i) - bw / 2},${top + hh} v${-(hh - 4)} q0,-4 4,-4 h${bw - 8} q4,0 4,4 v${hh - 4}z" style="fill:${col}"/>`
+        : `<rect x="${X(i) - bw / 2}" y="${top}" width="${bw}" height="${hh}" style="fill:${col}"/>`;
+      acc += c[t];
+    });
+    g += `<text class="ax" x="${X(i)}" y="${Y(c.total) - 6}" text-anchor="middle" style="fill:var(--ink2)">${fmt(c.total / 1000)}k</text><text class="ax" x="${X(i)}" y="${h - 10}" text-anchor="middle">${esc(c.name)}</text>`;
+  });
+  const id = 'hv' + Math.random().toString(36).slice(2, 8);
+  CH[id] = {w, h, x0:X(0), dx, n:list.length, ty: i => Y(list[i].total), tip: i => { const c = list[i];
+    return `<b>${esc(c.name)}</b> · ${aed(c.total)}<br>${HG_TIERS.map(([t]) => `${t} ${aed(c[t])}`).join('<br>')}<br>${fmt(c.units)} units`; }};
+  return `<div class="hg-big"><b>${aed(tot)}</b><span>${fmt(sum(list.map(c => c.units)))} units on hand · ${aed(old)} ageing or aged</span></div>
+    <div class="chart" data-ch="${id}"><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Inventory value at cost by category, split by stock age">${g}<rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" style="fill:transparent"/></svg><div class="tip"></div></div>
+    <div class="legend" style="margin-top:6px">${HG_TIERS.map(([t, c]) => `<span><i style="background:${c}"></i>${t}</span>`).join('')}<span class="muted">Ageing from ${S.ageing.ageing_days} days, aged from ${S.ageing.aged_days} days</span></div>`;
+}
+function revenueChart(){
+  if (!PRICES) loadPrices();
+  const PR = PRICES;
+  if (PR === 'loading') return '<div class="empty" style="height:270px;display:grid;place-items:center">Loading unit prices…</div>';
+  if (PR.error) return `<div class="warnbox">Could not load unit prices: ${esc(PR.error)} <button class="btn xs" onclick="PRICES=null;drawHG()">Retry</button></div>`;
+  const hist0 = (S.fc[0] && S.fc[0].chart.history) || [];
+  const days = hist0.map(d => ({date:d.date, aed:0, units:0, missing:0}));
+  S.fc.forEach(f => f.chart.history.forEach((d, i) => { const x = days[i]; if (!x) return; if (d.observed == null){ x.missing++; return; } x.units += d.observed; x.aed += d.observed * (PR[f.sku] || 0); }));
+  if (!days.length) return '<div class="empty">No sales history loaded.</div>';
+  const last30 = sum(days.slice(-30).map(d => d.aed)), prev30 = sum(days.slice(-60, -30).map(d => d.aed)), tot = sum(days.map(d => d.aed));
+  const w = 760, h = 270, x0 = 64, x1 = w - 12, y0 = 14, y1 = h - 30;
+  const maxV = niceMax(Math.max(...days.map(d => d.aed)) * 1.08), dx = (x1 - x0) / (days.length - 1);
+  const X = i => x0 + i * dx, Y = v => y1 - v / maxV * (y1 - y0);
+  const line = days.map((d, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(d.aed).toFixed(1)).join('');
+  let g = yTicks(maxV).map(v => `<line x1="${x0}" x2="${x1}" y1="${Y(v)}" y2="${Y(v)}" style="stroke:var(--line2)"/><text class="ax" x="${x0 - 8}" y="${Y(v) + 3}" text-anchor="end">${fmt(v)}</text>`).join('');
+  for (let i = 0; i < days.length; i += 15) g += `<text class="ax" x="${X(i)}" y="${h - 10}" text-anchor="middle">${dlabIso(days[i].date)}</text>`;
+  g += `<line x1="${X(days.length - 30)}" x2="${X(days.length - 30)}" y1="${y0}" y2="${y1}" style="stroke:var(--faint);stroke-dasharray:2 3"/><text class="ax" x="${X(days.length - 30) + 4}" y="${y0 + 8}">Last 30 days</text>`;
+  const id = 'hr' + Math.random().toString(36).slice(2, 8);
+  CH[id] = {w, h, x0, dx, n:days.length, ty: i => Y(days[i].aed), tip: i => { const d = days[i];
+    return `<b>${dlabIso(d.date)}</b><br>Revenue <b>${aed(d.aed)}</b><br>${fmt(d.units)} units sold${d.missing ? `<br>${d.missing} missing record${d.missing === 1 ? '' : 's'} not counted` : ''}`; }};
+  const chg = prev30 ? (last30 / prev30 - 1) * 100 : null;
+  return `<div class="hg-big"><b>${aed(last30)}</b><span>last 30 days${chg != null ? ` · <span class="${chg >= 0 ? 'up' : 'down'}">${chg >= 0 ? '+' : '−'}${Math.abs(chg).toFixed(1)}%</span> vs the 30 days before` : ''} · ${aed(tot)} over 90 days</span></div>
+    <div class="chart" data-ch="${id}"><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Daily sales revenue, last 90 days">${g}
+      <path d="${line} L${X(days.length - 1)},${y1} L${x0},${y1}Z" style="fill:var(--sig-soft)"/><path d="${line}" style="fill:none;stroke:var(--sig);stroke-width:2"/>
+      <line class="cross" x1="0" x2="0" y1="${y0}" y2="${y1}" style="stroke:var(--faint);opacity:0"/><rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" style="fill:transparent"/></svg><div class="tip"></div></div>
+    <div class="note" style="margin-top:6px">Days with a missing sales record count only the records present; stockout days show what was actually sold.</div>`;
+}
+AFTER.home = () => bindCharts($('v-home'));
 const plannerName = () => { const p = (S.mode && S.mode.planner) || 'planner'; return p === 'planner' ? 'Sara' : p; };
 function queueItem(r){
   const k = key(r.sku, r.location), d = activeDecision(k), o = r.top, decided = d && ['Approved','Overridden','Rejected'].includes(d.status);
