@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import math
+import threading
 from contextlib import asynccontextmanager
 from datetime import date, datetime
 from typing import Any, Dict, List, Literal, Optional, Union
@@ -70,12 +71,23 @@ watcher: Optional[InboxWatcher] = None
 async def lifespan(app: FastAPI):
     global watcher
     svc = get_service()
-    svc.ensure()
     for d in (settings.inbox_dir, settings.archive_dir, settings.quarantine_dir):
         d.mkdir(parents=True, exist_ok=True)
-    if settings.watcher_enabled:
-        watcher = InboxWatcher(svc)
-        watcher.start()
+
+    def warm_up():
+        # Build the plan after the port is open: on a small host this takes minutes, and a host that sees no
+        # open port in time restarts the app. Requests that arrive meanwhile wait on the service lock.
+        try:
+            svc.ensure()
+        except Exception:
+            log.exception("startup plan build failed; the first request will retry")
+            return
+        global watcher
+        if settings.watcher_enabled:
+            watcher = InboxWatcher(svc)
+            watcher.start()
+
+    threading.Thread(target=warm_up, daemon=True).start()
     yield
     if watcher:
         watcher.stop()
