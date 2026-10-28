@@ -59,7 +59,7 @@ function viewHome(){
     : `<div class="ask keyless"><span>${IC.flask}</span><span class="sp1">Keyless mode: typed questions are off. Use the scenario builder controls in the Lab; every number is the same in both modes.</span><button class="btn sm solid" onclick="openLab()">Open the Lab</button></div>
       <div class="chips-d"><button onclick="openLab('CHG-01|Abu Dhabi')">CHG-01 → Abu Dhabi in the Lab</button><button onclick="go('data');setTimeout(()=>$('inboxCard')&&$('inboxCard').scrollIntoView({behavior:'smooth',block:'center'}),100)">Drop SIG-001 into the inbox</button><button onclick="openPilot()">Explanations</button></div>`;
   return `
-  <div class="home-stage crs-home rv" id="homeStage">
+  <div class="home-stage crs-home rv" id="homeStage"><div class="gridfx hs-fx" aria-hidden="true">${gridPulses(8, 12, 22)}</div>
     <div class="hs-head"><span class="lbl">${esc(new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'short'}))} · planning day ${dlabIso(S.planDay)}</span>
       <h1>Good ${part}, ${esc(plannerName())}.<br><em>What are we starting with today?</em></h1></div>
     <div class="crs" id="crs" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Pages" onkeydown="crsKey(event)" onpointerdown="crsDown(event)" onpointermove="crsMove(event)" onpointerup="crsUp(event)" onpointerleave="crsUp(event)"><div class="crs-stage" id="crsStage"></div></div>
@@ -315,17 +315,17 @@ function crsMove(e){
 function crsUp(){ if (CRS.drag && CRS.drag.moved) CRS.dragEnd = Date.now() + 250; CRS.drag = null; }
 function crsKey(e){ if (e.key === 'ArrowRight'){ crsStep(1); crsHold(); e.preventDefault(); } else if (e.key === 'ArrowLeft'){ crsStep(-1); crsHold(); e.preventDefault(); } }
 RENDER.home = viewHome;
+// Grid lines behind the app, with pulses of light running along the lines themselves.
+// Each pulse sits exactly on one grid row or column (multiples of --grid) and crosses its layer, fading in and out.
+const GRID = 56;
+function gridPulses(n, rows, cols){
+  const rnd = (a, b) => a + Math.random() * (b - a), ri = m => 1 + Math.floor(Math.random() * m);
+  return Array.from({length:n}, (_, k) => { const h = k % 2 === 0, rev = Math.random() < .5;
+    return `<b class="${h ? 'h' : 'v'}${rev ? ' rev' : ''}" style="--at:${(h ? ri(rows) : ri(cols)) * GRID}px;--d:${rnd(7, 13).toFixed(1)}s;--dl:-${rnd(0, 13).toFixed(1)}s"></b>`; }).join('');
+}
 (function(){
-  const set = () => { const dark = document.documentElement.dataset.sp === 'dark';
-    const line = dark ? '#7F9BFF' : '#4A6EF0', args = [1600, 1000, 14, 420, '0.0016 0.0026'];
-    swirlPNG(5, line, dark ? 0.08 : 0.065, ...args).then(u => document.documentElement.style.setProperty('--bg-swirl', u));
-    swirlPNG(5, '#000000', 1, ...args).then(u => document.documentElement.style.setProperty('--bg-swirl-mask', u)); };
-  set(); new MutationObserver(set).observe(document.documentElement, {attributes:true, attributeFilter:['data-sp']});
-  // Light travelling along the swirl lines: a soft moving glow, masked to the lines themselves
-  const fx = document.createElement('div'); fx.id = 'bgFx'; fx.setAttribute('aria-hidden', 'true'); // 9 small lights, each crossing the screen on its own slow path; they only show where they meet a swirl line
-  const rnd = (a, b) => a + Math.random() * (b - a);
-  fx.innerHTML = '<i>' + Array.from({length:9}, () => { const ltr = Math.random() < .5;
-    return `<b style="--s:${rnd(5, 11).toFixed(1)}vmax;--d:${rnd(18, 34).toFixed(1)}s;--dl:-${rnd(0, 34).toFixed(1)}s;--x0:${ltr ? -10 : 110}vw;--y0:${rnd(0, 100).toFixed(0)}vh;--x1:${ltr ? 110 : -10}vw;--y1:${rnd(0, 100).toFixed(0)}vh"></b>`; }).join('') + '</i>';
+  const fx = document.createElement('div'); fx.id = 'bgFx'; fx.className = 'gridfx'; fx.setAttribute('aria-hidden', 'true');
+  fx.innerHTML = gridPulses(14, Math.ceil(screen.height / GRID), Math.ceil(screen.width / GRID));
   (document.body ? document.body.prepend(fx) : document.addEventListener('DOMContentLoaded', () => document.body.prepend(fx)));
 })();
 

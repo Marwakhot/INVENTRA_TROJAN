@@ -449,7 +449,7 @@ function viewLab(){
     else if (t.error) body = `<div class="warnbox">${esc(t.error)}</div>`;
     else body = `<div class="lab-body ${LAB.showSettings ? '' : 'noset'}">
       ${chatHTML(t)}
-      <div class="lab-main"><div class="row" style="justify-content:space-between;margin-bottom:10px"><div><span class="lab-status ${esc(t.status.replace(' ', ''))}">${esc(t.pinned ? 'Baseline' : t.status)}</span> <b style="margin-left:6px">${t.pinned ? 'Do nothing' : esc(t.letter + ': ' + t.name)}</b> <span class="muted" style="font-size:12px">${esc(t.results.label)}${t.forked_from ? ' · forked' : ''}</span></div><div class="row">${t.pinned ? '' : `<button class="btn xs" onclick="forkTab(${jsq(t.tab_id)})">Fork</button><button class="btn xs" onclick="renameTab(${jsq(t.tab_id)})">Rename</button>`}<button class="btn xs" onclick="LAB.showSettings=!LAB.showSettings;render('lab',true)">${LAB.showSettings ? 'Hide settings' : 'Settings'}</button></div></div>
+      <div class="lab-main" id="labMain" onscroll="LAB.mainY={sel:LAB.sel,y:this.scrollTop}"><div class="row lab-mh" style="justify-content:space-between;margin-bottom:10px"><div><span class="lab-status ${esc(t.status.replace(' ', ''))}">${esc(t.pinned ? 'Baseline' : t.status)}</span> <b style="margin-left:6px">${t.pinned ? 'Do nothing' : esc(t.letter + ': ' + t.name)}</b> <span class="muted" style="font-size:12px">${esc(t.results.label)}${t.forked_from ? ' · forked' : ''}</span></div><div class="row">${t.pinned ? '' : `<button class="btn xs" onclick="forkTab(${jsq(t.tab_id)})">Fork</button><button class="btn xs" onclick="renameTab(${jsq(t.tab_id)})">Rename</button>`}<button class="btn xs" onclick="LAB.showSettings=!LAB.showSettings;render('lab',true)">${LAB.showSettings ? 'Hide settings' : 'Settings'}</button></div></div>
         ${tabResultsHTML(t)}</div>
       ${LAB.showSettings ? settingsHTML(t) : ''}
     </div>`;
@@ -459,7 +459,9 @@ function viewLab(){
   <div class="lab-frame rv" style="--d:.05s">${head}${bar}${body}</div>`;
 }
 RENDER.lab = viewLab;
-AFTER.lab = () => { bindCharts($('v-lab')); if (agBusy() && !AG_TIMER && LAB.ws && !LAB.ws.error) loadRuns(false); };
+AFTER.lab = () => { bindCharts($('v-lab'));
+  const m = $('labMain'); if (m && LAB.mainY && LAB.mainY.sel === LAB.sel) m.scrollTop = LAB.mainY.y;   // keep the results box where it was across re-renders
+  if (agBusy() && !AG_TIMER && LAB.ws && !LAB.ws.error) loadRuns(false); };
 
 function answerQ(po, yes){
   if (!yes){ ANSWERED[po] = 'no'; try { localStorage.setItem('inventra-answered', JSON.stringify(ANSWERED)); } catch (e) {} toast(`${po} stays out of the plan until it is confirmed`); render(CURRENT, true); refreshChrome(); return; }
