@@ -7,9 +7,9 @@ AI-assisted inventory planning for a fictional UAE B2B seller (GulfTrade Supplie
 | | Link |
 |---|---|
 | **App** | https://YOUR-APP.vercel.app |
-| API docs (interactive) | https://YOUR-BACKEND.up.railway.app/docs |
+| API docs (interactive) | https://inventra-api-wyqe.onrender.com/docs |
 
-The hosted app is one shared workspace: approvals and uploads made by one visitor are visible to the next. **Reset demo** (page footer) restores the seeded dataset at any time. The first load can take a few seconds while the engine builds the plan.
+The hosted app is one shared workspace: approvals and uploads made by one visitor are visible to the next. **Reset demo** (page footer) restores the seeded dataset at any time. The API runs on a free plan that sleeps when idle, so the first load can take up to a minute while it wakes and builds the plan.
 
 ## Run it locally
 
