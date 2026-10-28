@@ -1,50 +1,61 @@
 # Inventra
 
-AI-assisted inventory planning for a fictional UAE B2B seller (GulfTrade Supplies): what stock to move, reorder or hold, where, when and why, with every number traced to source data. The system recommends; the planner decides.
+AI-assisted inventory planning for a UAE B2B seller: what stock to move, reorder or hold, where, when and why, with every number traced back to its source data. The system recommends; the planner decides.
 
-## Live demo
+## Try it online
 
-| | Link |
-|---|---|
-| **App** | https://YOUR-APP.vercel.app |
-| API docs (interactive) | https://inventra-api-wyqe.onrender.com/docs |
+**App: https://inventra-nine-ochre.vercel.app**
 
-The hosted app is one shared workspace: approvals and uploads made by one visitor are visible to the next. **Reset demo** (page footer) restores the seeded dataset at any time. The API runs on a free plan that sleeps when idle, so the first load can take up to a minute while it wakes and builds the plan.
+API docs: https://inventra-api-wyqe.onrender.com/docs
+
+- The first load can take up to a minute while the server wakes up.
+- Everyone shares one demo workspace. Click **Reset demo** (page footer) to start fresh.
 
 ## Run it locally
 
-You need Python 3.9 to 3.12. The app runs fully without an LLM key ("keyless" mode); to enable AI explanations, copy `inventra-backend/.env.example` to `inventra-backend/.env` and fill in the three `LLM_` settings.
+You need **Python 3.9 to 3.12**. Download or clone this repo, then:
 
-**macOS / Linux**
-```bash
-cd inventra-backend && make setup     # creates .venv and installs dependencies
-cd ../inventra-frontend && ./start.sh # API on 127.0.0.1:8000, UI on http://localhost:3000
-```
+### Windows (PowerShell)
 
-**Windows (PowerShell)**: two terminals.
+Terminal 1, the API:
 ```powershell
-# terminal 1: API
 cd inventra-backend
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m uvicorn inventra.api.main:app --host 127.0.0.1 --port 8000
+```
 
-# terminal 2: UI
+Terminal 2, the app:
+```powershell
 cd inventra-frontend
 python serve.py 3000
 ```
 
+### macOS / Linux
+
+```bash
+cd inventra-backend && make setup
+cd ../inventra-frontend && ./start.sh
+```
+
 Then open **http://localhost:3000** (use `localhost`, not `127.0.0.1`).
 
-**Docker (API only)**: `cd inventra-backend && docker compose up -d --build`, then serve the UI as above.
+### Optional: AI explanations
 
-**Tests**: `cd inventra-backend` then `make test` (or `.\.venv\Scripts\python.exe -m pytest -q tests` on Windows).
+Everything works without an AI key. To turn on AI explanations and typed questions, copy `inventra-backend/.env.example` to `inventra-backend/.env` and set `LLM_BASE_URL`, `LLM_API_KEY` and `LLM_MODEL` (any OpenRouter model). Restart the API.
 
-## What is in this repo
+### Run the tests
 
-| Folder | What it is |
+```bash
+cd inventra-backend
+make test          # Windows: .\.venv\Scripts\python.exe -m pytest -q tests
+```
+
+## What's inside
+
+| Folder | Contents |
 |---|---|
-| [`inventra-backend/`](inventra-backend/) | Python engine, watcher, LLM layer (optional) and FastAPI API. Synthetic seed data, generator, judges' checklist and answer key, tests. |
-| [`inventra-frontend/`](inventra-frontend/) | The Inventra UI, wired to the API. It computes nothing in the browser. |
+| `inventra-backend/` | Python planning engine, file watcher, AI layer and FastAPI API, with synthetic data and tests |
+| `inventra-frontend/` | The web app (plain HTML and JavaScript) |
 
-All data is synthetic. No credentials or real buyer or supplier data are included.
+All data is synthetic. No real buyer or supplier data is included.
